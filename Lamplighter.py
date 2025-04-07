@@ -18,21 +18,23 @@ import mmh3
 import time
 from fastcheck import FastCheck
 
+# 移除全局导入，改为按需导入
+combined_script_available = False
+website_analyzer_available = False
 
 # 当前软件版本信息
 def banner():
     print(Fore.LIGHTGREEN_EX + """
-   __                   ___      __   __
-  / /  ___ ___ _  ___  / (_)__ _/ /  / /____ ____
- / /__/ _ `/  ' \/ _ \/ / / _ `/ _ \/ __/ -_) __/
-/____/\_,_/_/_/_/ .__/_/_/\_, /_//_/\__/\__/_/
-               /_/       /___/
-
+   __                   __   _      __   __
+  / /  ___ ___ _  ___  / /  (_)__ _/ /  / /____ ____
+ / /__/ _ `/  ' \/ _ \/ /__/ / _ `/ _ \/ __/ -_) __/
+/____/\_,_/_/_/_/ .__/____/_/\_, /_//_/\__/\__/_/
+               /_/          /___/
                                        By XU17""")
     print(Fore.RED + "======基础配置=======")
     print(Fore.GREEN + f"[*]日志记录:{'开启' if logger_sw == 'on' else '关闭'}")
     if logger_sw == "on":
-        sys.stdout = Logger("fofamap.log")
+        sys.stdout = Logger("LampLighter.log")
     print(Fore.GREEN + f"[*]存活检测:{'开启' if check_alive == 'on' else '关闭'}")
     if not query_host and not bat_host_file:
         print(Fore.GREEN + f"[*]搜索范围:{'全部数据' if full_sw == 'true' else '一年内数据'}")
@@ -683,6 +685,20 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--outfile', default="fofa查询结果.xlsx", help='File Save Name')
     parser.add_argument('-n', '--nuclie', help='Use Nuclie To Scan Targets', action='store_true')
     parser.add_argument('-up', '--update', help='OneKey Update Nuclie-engine And Nuclei-templates', action='store_true')
+    
+    # 添加combined_script.py的命令行参数
+    parser.add_argument('--combined', help='Run combined script processing', action='store_true')
+    parser.add_argument('--file1', help='First Excel file path (containing IPs to exclude)')
+    parser.add_argument('--file2', help='Second Excel file path (file to process)')
+    parser.add_argument('--city', help='City name (for CIDR output)')
+    parser.add_argument('-e', '--excel_output', help='Path for filtered Excel output')
+    parser.add_argument('-t', '--text_output', help='Path for CIDR results output')
+    
+    # 添加website_analyzer.py的命令行参数
+    parser.add_argument('--analyze', help='Run website analysis', action='store_true')
+    parser.add_argument('--target_company', help='Target company name to check for')
+    parser.add_argument('--model', help='OpenAI model to use for analysis')
+    
     args = parser.parse_args()
     query_str = args.query
     query_host = args.host_query
@@ -697,12 +713,34 @@ if __name__ == '__main__':
     include = args.include
     key_word = args.key_word
     ico = args.icon_query
+    
+    # 按需导入模块
+    if args.combined:
+        try:
+            import combined_script
+            combined_script_available = True
+            print(Fore.GREEN + "[+] 成功导入combined_script模块")
+        except ImportError as e:
+            print(Fore.RED + f"[!] 错误: 无法导入combined_script模块: {e}")
+            combined_script_available = False
+    
+    if args.analyze:
+        try:
+            import website_analyzer
+            website_analyzer_available = True
+            print(Fore.GREEN + "[+] 成功导入website_analyzer模块")
+        except ImportError as e:
+            print(Fore.RED + f"[!] 错误: 无法导入website_analyzer模块: {e}")
+            website_analyzer_available = False
+    
     # 获取版本信息
     banner()
     # 生成一个fofa客户端实例
     client = fofa.Client()
     # 获取账号信息
-    get_userinfo()
+    # get_userinfo()
+    
+    # 处理原有功能
     if query_host:
         print(Fore.RED + "======Host聚合=======")
         host_merge(query_host, client.email, client.key)
@@ -734,3 +772,71 @@ if __name__ == '__main__':
         sys.exit()
     if update:
         nuclei_update()
+    
+    # 处理combined_script.py功能
+    if args.combined:
+        if not combined_script_available:
+            print(Fore.RED + "[!] 错误: combined_script模块未成功导入，无法执行此功能")
+            sys.exit(1)
+            
+        if not (args.file1 and args.file2 and args.city):
+            print(Fore.RED + "[!] 错误: 使用--combined需要同时指定--file1, --file2和--city参数")
+            sys.exit(1)
+        
+        print(Fore.RED + "=====组合脚本处理=====")
+        print(Fore.GREEN + f"[+] 第一个Excel文件: {args.file1}")
+        print(Fore.GREEN + f"[+] 第二个Excel文件: {args.file2}")
+        print(Fore.GREEN + f"[+] 城市名称: {args.city}")
+        
+        result = combined_script.process_combined(
+            args.file1, 
+            args.file2, 
+            args.city,
+            args.excel_output,
+            args.text_output
+        )
+        
+        if result:
+            print(Fore.GREEN + "[+] 组合脚本处理成功完成")
+        else:
+            print(Fore.RED + "[!] 组合脚本处理失败")
+        sys.exit()
+    
+    # 处理website_analyzer.py功能
+    if args.analyze:
+        if not website_analyzer_available:
+            print(Fore.RED + "[!] 错误: website_analyzer模块未成功导入，无法执行此功能")
+            sys.exit(1)
+            
+        if not (args.outfile and args.target_company):
+            print(Fore.RED + "[!] 错误: 使用--analyze需要同时指定--outfile (用于Excel文件路径)和--target_company参数")
+            sys.exit(1)
+        
+        print(Fore.RED + "=====网站分析处理=====")
+        print(Fore.GREEN + f"[+] Excel文件路径: {args.outfile}")
+        print(Fore.GREEN + f"[+] 目标公司: {args.target_company}")
+        
+        if args.model:
+            print(Fore.GREEN + f"[+] 使用模型: {args.model}")
+        
+        # 创建输出目录
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        output_dir = os.path.join('output', f'analysis_{timestamp}')
+        
+        analyzer = website_analyzer.WebsiteAnalyzer(output_dir=output_dir)
+        if args.model:
+            analyzer.model = args.model
+        
+        try:
+            analyzer.run_analysis(args.outfile, args.target_company)
+            print(Fore.GREEN + f"[+] 网站分析成功完成，结果保存在: {output_dir}")
+        except Exception as e:
+            print(Fore.RED + f"[!] 网站分析处理失败: {e}")
+        finally:
+            analyzer.cleanup()
+        sys.exit()
+    
+    # 如果没有指定任何操作
+    if not (query_host or count_query or bat_host_file or query_str or bat_query_file or ico or update or 
+           args.combined or args.analyze):
+        parser.print_help()

@@ -1,9 +1,49 @@
-# LampLighter
+# LampLighter 1.0
+LampLighter是一个网络安全信息收集与分析工具，此工具分析来自IP地址列表的网站，判断它们是否属于特定公司或企业。基于大语言模型，工具能够智能分析网站内容并生成详细报告。
+集成了多种功能，包括FOFA查询、网站分析、漏洞扫描等。部分fofa代码参照FofaMap项目进行二开。
+## 设置
 
-这个工具分析来自IP地址列表的网站，判断它们是否属于特定公司或企业。通过OpenAI API，工具能够智能分析网站内容并生成详细报告。
+1. 安装所需依赖:
+   ```
+   pip install -r requirements.txt
+   ```
+
+2. 配置保存在`config.py`中，包括:
+   - OpenAI API配置（API密钥、默认模型等）
+   - OCR设置
+   - 分析设置（如超时时间）
+   
+   **重要**: 使用前请确保在`config.py`中填入您的OpenAI API密钥。
+
+3. 请确保正确配置`fofa.ini`文件，
+- 包含以下内容：
+
+```ini
+[logger]
+logger = on
+
+[full]
+full = true
+
+[fast_check]
+check_alive = on
+timeout = 5
+
+[excel]
+sheet_merge = on
+
+[page]
+start_page = 1
+end_page = 2
+
+[size]
+size = 100
+
+[fields]
+fields = title,ip,port,protocol,domain,icp,province,city
+```
 
 ## 功能特点
-
 - 从Excel文件的第二列读取IP地址/主机信息
 - 获取网站内容（支持HTTP和HTTPS）
 - 截图并进行OCR图像文本识别
@@ -12,69 +52,154 @@
 - 每次运行结果保存在带时间戳的独立目录中，避免覆盖
 - 生成详细HTML报告，包含所有分析过程和结果
 - 显示LLM交互过程和分析结果
-
-## 设置
-
-1. 安装所需依赖:
-   
-   ```
-   pip install -r requirements.txt
-   ```
-
-2. 配置保存在`config.py`中，包括:
-   
-   - OpenAI API配置（API密钥、默认模型等）
-   - OCR设置
-   - 分析设置（如超时时间）
-   
-   **重要**: 使用前请确保在`config.py`中填入您的OpenAI API密钥。
+- **FOFA查询**：支持多种查询方式，包括关键词查询、批量查询、聚合查询等
+- **网站分析**：分析网站内容，判断网站是否属于特定公司
+- **漏洞扫描**：集成Nuclei引擎进行漏洞扫描
+- **数据导出**：支持多种格式的数据导出，包括Excel、文本等
+- **组合处理**：支持Excel文件处理和IP地址提取
 
 ## 使用方法
 
-运行工具的命令:
+### 基本查询
 
-```
-python website_analyzer.py <excel文件> <目标公司名称> [--model <模型名称>]
-```
+```bash
+# 关键词查询
+python LampLighter.py -q "title=\"beijing\""
 
-### 参数说明:
+# 指定查询字段
+python LampLighter.py -q "title=\"beijing\"" -f "title,ip,port,protocol,domain,icp,province,city"
 
-- `<excel文件>`: 包含IP地址/主机信息的Excel文件路径（主机信息在第二列）
-- `<目标公司名称>`: 要检查的目标公司名称
-- `--model`: 可选参数，指定要使用的OpenAI模型，不指定则使用config.py中的默认模型
-
-### 示例:
-
-```
-python website_analyzer.py "fofa查询结果-1743941795.xlsx" "腾讯"
+# 指定输出文件
+python LampLighter.py -q "title=\"beijing\"" -o "beijing_results.xlsx"
 ```
 
-使用特定模型的示例:
+### 批量查询
+
+```bash
+# 批量查询
+python LampLighter.py -bq "batch_query.txt"
+
+# 批量主机查询
+python LampLighter.py -bhq "batch_host.txt"
+```
+
+### 聚合查询
+
+```bash
+# 主机聚合查询
+python LampLighter.py -hq "example.com"
+
+# 统计聚合查询
+python LampLighter.py -cq "title=\"beijing\"" -f "title,ip,port,protocol,domain,icp,province,city"
+```
+
+### 网站图标查询
+
+```bash
+# 网站图标查询
+python LampLighter.py -ico "https://example.com"
+```
+
+### 漏洞扫描
+
+```bash
+# 使用Nuclei进行漏洞扫描
+python LampLighter.py -q "title=\"beijing\"" -s -n
+
+# 更新Nuclei
+python LampLighter.py -up
+```
+
+### 组合脚本处理
+
+```bash
+# 处理两个Excel文件并提取CIDR
+python LampLighter.py --combined --file1 first.xlsx --file2 second.xlsx --city 北京
+
+# 指定输出文件
+python LampLighter.py --combined --file1 first.xlsx --file2 second.xlsx --city 北京 -e filtered.xlsx -t output.txt
+```
+
+### 网站分析
+
+```bash
+# 分析网站是否属于特定公司
+python LampLighter.py --analyze --outfile targets.xlsx --target_company "目标公司"
+
+# 指定OpenAI模型
+python LampLighter.py --analyze --outfile targets.xlsx --target_company "目标公司" --model "gpt-4"
+```
+
+## 参数说明
+
+### 基本参数
+
+- `-q, --query`: FOFA查询语句
+- `-hq, --host_query`: 主机聚合查询
+- `-bq, --bat_query`: FOFA批量查询
+- `-bhq, --bat_host_query`: FOFA批量主机查询
+- `-cq, --count_query`: FOFA统计查询
+- `-f, --query_fields`: FOFA查询字段，默认为"title"
+- `-i, --include`: 指定包含的HTTP协议状态码
+- `-kw, --key_word`: 过滤用户指定内容
+- `-ico, --icon_query`: FOFA网站图标查询
+- `-s, --scan_format`: 输出扫描格式
+- `-o, --outfile`: 文件保存名称，默认为"fofa查询结果.xlsx"
+- `-n, --nuclie`: 使用Nuclei扫描目标
+- `-up, --update`: 一键更新Nuclei引擎和模板
+
+### 组合脚本参数
+
+- `--combined`: 运行组合脚本处理
+- `--file1`: 第一个Excel文件路径（包含要排除的IP）
+- `--file2`: 第二个Excel文件路径（要处理的文件）
+- `--city`: 城市名称（用于CIDR输出）
+- `-e, --excel_output`: 过滤后的Excel输出路径
+- `-t, --text_output`: CIDR结果输出路径
+
+### 网站分析参数
+
+- `--analyze`: 运行网站分析
+- `--target_company`: 目标公司名称
+- `--model`: 用于分析的OpenAI或deepseek等模型
+
+## 输出示例
+
+### FOFA查询结果
 
 ```
-python website_analyzer.py "fofa查询结果-1743941795.xlsx" "腾讯" --model "gpt-4-turbo"
+======查询内容=======
+[+] 查询语句：title="beijing"
+[+] 查询参数：title,ip,port,protocol,domain,icp,province,city
+[+] 查询页数：1-2
+
+======查询结果=======
++----+------------------+------+----------+--------+------+---------+--------+
+| ID |      title      |  ip  |   port   |protocol|domain|  icp    |province|
++----+------------------+------+----------+--------+------+---------+--------+
+|  1 | 北京市政府网站  | 1.2.3.4| 80      | http   | gov.cn| 京ICP备 | 北京   |
++----+------------------+------+----------+--------+------+---------+--------+
 ```
 
-## 输出结果
+### 网站分析结果
 
-该工具会:
+网站分析结果将保存在`output/analysis_YYYYMMDD_HHMMSS`目录下，包括：
 
-1. 在控制台和`analysis.log`中生成日志信息
-2. 在`output`目录下创建带时间戳的子目录（例如：`output/analysis_20231225_123456/`），其中包含:
-   - `<目标公司>_analysis_results.xlsx`: 包含详细分析结果的Excel文件
-   - `reports/`: 包含每个网站的HTML详细报告
-   - `reports/<目标公司>_summary_report.html`: 所有分析结果的汇总HTML报告
-   - `images/`: 网站截图和识别的图像
+- 详细的分析报告（HTML格式）
+- 截图和图像分析
+- Excel格式的结果汇总
 
-## 分析报告包含:
+## 注意事项
 
-- IP地址/主机信息
-- 是否可访问
-- 页面标题
-- 是否属于目标公司的判断
-- 置信度分数(0-100)
-- 判断依据
-- 在页面上找到的公司标识
-- 网站截图和源代码
-- OCR提取的文本
-- 与LLM的完整交互过程 
+1. 使用前请确保已正确配置FOFA API密钥
+2. 网站分析功能需要OpenAI API密钥
+3. 漏洞扫描功能需要安装Nuclei引擎
+4. 部分功能可能需要管理员权限
+
+## 许可证
+
+MIT License
+
+## 作者
+
+XU17 
