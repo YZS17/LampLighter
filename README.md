@@ -56,7 +56,7 @@ fields = title,ip,port,protocol,domain,icp,province,city
 - **网站分析**：分析网站内容，判断网站是否属于特定公司
 - **漏洞扫描**：集成Nuclei引擎进行漏洞扫描
 - **数据导出**：支持多种格式的数据导出，包括Excel、文本等
-- **组合处理**：支持Excel文件处理和IP地址提取
+- **IP工具**：支持IP过滤和CIDR提取功能，提供三种工作模式
 
 ## 使用方法
 
@@ -110,14 +110,32 @@ python LampLighter.py -q "title=\"beijing\"" -s -n
 python LampLighter.py -up
 ```
 
-### 组合脚本处理
+### IP工具
+
+LampLighter集成了三种IP工具模式：
+
+#### 1. 组合模式 (combined)
+
+同时执行Excel过滤和CIDR提取功能：
 
 ```bash
-# 处理两个Excel文件并提取CIDR
-python LampLighter.py --combined --file1 first.xlsx --file2 second.xlsx --city 北京
+python LampLighter.py --ip-tools combined --file1 first.xlsx --file2 second.xlsx --city 北京 -e filtered.xlsx -t output.txt
+```
 
-# 指定输出文件
-python LampLighter.py --combined --file1 first.xlsx --file2 second.xlsx --city 北京 -e filtered.xlsx -t output.txt
+#### 2. Excel过滤模式 (excel)
+
+仅执行Excel过滤功能，从第一个表格提取IP并过滤第二个表格：
+
+```bash
+python LampLighter.py --ip-tools excel --file1 first.xlsx --file2 second.xlsx -e filtered.xlsx
+```
+
+#### 3. CIDR提取模式 (extract)
+
+仅执行CIDR提取功能，从表格提取IP并转换为CIDR格式：
+
+```bash
+python LampLighter.py --ip-tools extract --file2 second.xlsx --city 北京 -t output.txt
 ```
 
 ### 网站分析
@@ -148,9 +166,9 @@ python LampLighter.py --analyze --outfile targets.xlsx --target_company "目标�
 - `-n, --nuclie`: 使用Nuclei扫描目标
 - `-up, --update`: 一键更新Nuclei引擎和模板
 
-### 组合脚本参数
+### IP工具参数
 
-- `--combined`: 运行组合脚本处理
+- `--ip-tools`: 选择IP工具模式，可选值为`combined`、`excel`或`extract`
 - `--file1`: 第一个Excel文件路径（包含要排除的IP）
 - `--file2`: 第二个Excel文件路径（要处理的文件）
 - `--city`: 城市名称（用于CIDR输出）
@@ -181,6 +199,44 @@ python LampLighter.py --analyze --outfile targets.xlsx --target_company "目标�
 +----+------------------+------+----------+--------+------+---------+--------+
 ```
 
+### IP工具输出示例
+
+#### 组合模式输出
+
+```
+=====IP工具处理 (combined)=====
+[+] 第一个Excel文件: first.xlsx
+[+] 第二个Excel文件: second.xlsx
+[+] 城市名称: 北京
+[+] 过滤后的Excel已保存到 filtered.xlsx
+CIDR结果:
+ip="1.2.3.0/24" && status_code="200" && domain="" && city="北京"
+[+] CIDR结果已保存到 output.txt
+[+] 组合脚本处理成功完成
+```
+
+#### Excel过滤模式输出
+
+```
+=====IP工具处理 (excel)=====
+[+] 第一个Excel文件: first.xlsx
+[+] 第二个Excel文件: second.xlsx
+[+] 过滤后的Excel已保存到 filtered.xlsx
+[+] Excel过滤处理成功完成
+```
+
+#### CIDR提取模式输出
+
+```
+=====IP工具处理 (extract)=====
+[+] Excel文件: second.xlsx
+[+] 城市名称: 北京
+CIDR结果:
+ip="1.2.3.0/24" && status_code="200" && domain="" && city="北京"
+[+] CIDR结果已保存到 output.txt
+[+] CIDR提取处理成功完成
+```
+
 ### 网站分析结果
 
 网站分析结果将保存在`output/analysis_YYYYMMDD_HHMMSS`目录下，包括：
@@ -192,13 +248,10 @@ python LampLighter.py --analyze --outfile targets.xlsx --target_company "目标�
 ## 注意事项
 
 1. 使用前请确保已正确配置FOFA API密钥
-2. 网站分析功能需要OpenAI API密钥
-3. 漏洞扫描功能需要安装Nuclei引擎
+2. 网站分析功能需要OpenAI或deepseek等大模型API密钥
+3. 漏洞扫描功能使用Nuclei引擎
 4. 部分功能可能需要管理员权限
 
-## 许可证
-
-MIT License
 
 ## 作者
 

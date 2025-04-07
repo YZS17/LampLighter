@@ -34,7 +34,7 @@ def banner():
     print(Fore.RED + "======基础配置=======")
     print(Fore.GREEN + f"[*]日志记录:{'开启' if logger_sw == 'on' else '关闭'}")
     if logger_sw == "on":
-        sys.stdout = Logger("LampLighter.log")
+        sys.stdout = Logger("fofamap.log")
     print(Fore.GREEN + f"[*]存活检测:{'开启' if check_alive == 'on' else '关闭'}")
     if not query_host and not bat_host_file:
         print(Fore.GREEN + f"[*]搜索范围:{'全部数据' if full_sw == 'true' else '一年内数据'}")
@@ -304,12 +304,12 @@ def get_userinfo():
     fcoin = user_info["fcoin"]  # 查询F币剩余数量
     isvip = user_info["isvip"]  # 查询用户是否为VIP
     vip_level = user_info["vip_level"]  # 查询用户VIP等级
-    print(Fore.RED + "======个人信息=======")
-    print(Fore.GREEN + f"[+] 邮箱：{email}")
-    print(Fore.GREEN + f"[+] 用户名：{username}")
-    print(Fore.GREEN + f"[+] F币剩余数量：{fcoin}")
-    print(Fore.GREEN + f"[+] 是否是VIP：{isvip}")
-    print(Fore.GREEN + f"[+] VIP等级：{vip_level}")
+    # print(Fore.RED + "======个人信息=======")
+    # print(Fore.GREEN + f"[+] 邮箱：{email}")
+    # print(Fore.GREEN + f"[+] 用户名：{username}")
+    # print(Fore.GREEN + f"[+] F币剩余数量：{fcoin}")
+    # print(Fore.GREEN + f"[+] 是否是VIP：{isvip}")
+    # print(Fore.GREEN + f"[+] VIP等级：{vip_level}")
 
 
 # 调用fofa_api进行搜索
@@ -687,12 +687,14 @@ if __name__ == '__main__':
     parser.add_argument('-up', '--update', help='OneKey Update Nuclie-engine And Nuclei-templates', action='store_true')
     
     # 添加combined_script.py的命令行参数
-    parser.add_argument('--combined', help='Run combined script processing', action='store_true')
-    parser.add_argument('--file1', help='First Excel file path (containing IPs to exclude)')
-    parser.add_argument('--file2', help='Second Excel file path (file to process)')
-    parser.add_argument('--city', help='City name (for CIDR output)')
-    parser.add_argument('-e', '--excel_output', help='Path for filtered Excel output')
-    parser.add_argument('-t', '--text_output', help='Path for CIDR results output')
+    ip_tools_parser = parser.add_argument_group('IP Tools Options')
+    ip_tools_parser.add_argument('--ip-tools', choices=['combined', 'excel', 'extract'], 
+                                help='Run IP tools: combined (filter and extract CIDR), excel (filter only), or extract (extract CIDR only)')
+    ip_tools_parser.add_argument('--file1', help='First Excel file path (containing IPs to exclude)')
+    ip_tools_parser.add_argument('--file2', help='Second Excel file path (file to process)')
+    ip_tools_parser.add_argument('--city', help='City name (for CIDR output)')
+    ip_tools_parser.add_argument('-e', '--excel_output', help='Path for filtered Excel output')
+    ip_tools_parser.add_argument('-t', '--text_output', help='Path for CIDR results output')
     
     # 添加website_analyzer.py的命令行参数
     parser.add_argument('--analyze', help='Run website analysis', action='store_true')
@@ -715,7 +717,7 @@ if __name__ == '__main__':
     ico = args.icon_query
     
     # 按需导入模块
-    if args.combined:
+    if args.ip_tools:
         try:
             import combined_script
             combined_script_available = True
@@ -738,7 +740,7 @@ if __name__ == '__main__':
     # 生成一个fofa客户端实例
     client = fofa.Client()
     # 获取账号信息
-    # get_userinfo()
+    get_userinfo()
     
     # 处理原有功能
     if query_host:
@@ -774,32 +776,73 @@ if __name__ == '__main__':
         nuclei_update()
     
     # 处理combined_script.py功能
-    if args.combined:
+    if args.ip_tools:
         if not combined_script_available:
             print(Fore.RED + "[!] 错误: combined_script模块未成功导入，无法执行此功能")
             sys.exit(1)
+        
+        print(Fore.RED + f"=====IP工具处理 ({args.ip_tools})=====")
+        
+        if args.ip_tools == 'combined':
+            if not (args.file1 and args.file2 and args.city):
+                print(Fore.RED + "[!] 错误: 使用combined模式需要同时指定--file1, --file2和--city参数")
+                sys.exit(1)
             
-        if not (args.file1 and args.file2 and args.city):
-            print(Fore.RED + "[!] 错误: 使用--combined需要同时指定--file1, --file2和--city参数")
-            sys.exit(1)
+            print(Fore.GREEN + f"[+] 第一个Excel文件: {args.file1}")
+            print(Fore.GREEN + f"[+] 第二个Excel文件: {args.file2}")
+            print(Fore.GREEN + f"[+] 城市名称: {args.city}")
+            
+            result = combined_script.process_combined(
+                args.file1, 
+                args.file2, 
+                args.city,
+                args.excel_output,
+                args.text_output
+            )
+            
+            if result:
+                print(Fore.GREEN + "[+] 组合脚本处理成功完成")
+            else:
+                print(Fore.RED + "[!] 组合脚本处理失败")
         
-        print(Fore.RED + "=====组合脚本处理=====")
-        print(Fore.GREEN + f"[+] 第一个Excel文件: {args.file1}")
-        print(Fore.GREEN + f"[+] 第二个Excel文件: {args.file2}")
-        print(Fore.GREEN + f"[+] 城市名称: {args.city}")
+        elif args.ip_tools == 'excel':
+            if not (args.file1 and args.file2):
+                print(Fore.RED + "[!] 错误: 使用excel模式需要同时指定--file1和--file2参数")
+                sys.exit(1)
+            
+            print(Fore.GREEN + f"[+] 第一个Excel文件: {args.file1}")
+            print(Fore.GREEN + f"[+] 第二个Excel文件: {args.file2}")
+            
+            result = combined_script.process_excel(
+                args.file1, 
+                args.file2, 
+                args.excel_output
+            )
+            
+            if result is not None:
+                print(Fore.GREEN + "[+] Excel过滤处理成功完成")
+            else:
+                print(Fore.RED + "[!] Excel过滤处理失败")
         
-        result = combined_script.process_combined(
-            args.file1, 
-            args.file2, 
-            args.city,
-            args.excel_output,
-            args.text_output
-        )
+        elif args.ip_tools == 'extract':
+            if not (args.file2 and args.city):
+                print(Fore.RED + "[!] 错误: 使用extract模式需要同时指定--file2和--city参数")
+                sys.exit(1)
+            
+            print(Fore.GREEN + f"[+] Excel文件: {args.file2}")
+            print(Fore.GREEN + f"[+] 城市名称: {args.city}")
+            
+            result = combined_script.process_extract(
+                args.file2, 
+                args.city, 
+                args.text_output
+            )
+            
+            if result:
+                print(Fore.GREEN + "[+] CIDR提取处理成功完成")
+            else:
+                print(Fore.RED + "[!] CIDR提取处理失败")
         
-        if result:
-            print(Fore.GREEN + "[+] 组合脚本处理成功完成")
-        else:
-            print(Fore.RED + "[!] 组合脚本处理失败")
         sys.exit()
     
     # 处理website_analyzer.py功能
@@ -838,5 +881,5 @@ if __name__ == '__main__':
     
     # 如果没有指定任何操作
     if not (query_host or count_query or bat_host_file or query_str or bat_query_file or ico or update or 
-           args.combined or args.analyze):
+           args.ip_tools or args.analyze):
         parser.print_help()
