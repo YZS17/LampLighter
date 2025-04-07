@@ -688,8 +688,8 @@ if __name__ == '__main__':
     
     # 添加combined_script.py的命令行参数
     ip_tools_parser = parser.add_argument_group('IP Tools Options')
-    ip_tools_parser.add_argument('--ip-tools', choices=['combined', 'excel', 'extract'], 
-                                help='Run IP tools: combined (filter and extract CIDR), excel (filter only), or extract (extract CIDR only)')
+    ip_tools_parser.add_argument('--ip-tools', choices=['excel', 'extract'], 
+                                help='Run IP tools: excel (filter only) or extract (extract CIDR only)')
     ip_tools_parser.add_argument('--file1', help='First Excel file path (containing IPs to exclude)')
     ip_tools_parser.add_argument('--file2', help='Second Excel file path (file to process)')
     ip_tools_parser.add_argument('--city', help='City name (for CIDR output)')
@@ -783,29 +783,7 @@ if __name__ == '__main__':
         
         print(Fore.RED + f"=====IP工具处理 ({args.ip_tools})=====")
         
-        if args.ip_tools == 'combined':
-            if not (args.file1 and args.file2 and args.city):
-                print(Fore.RED + "[!] 错误: 使用combined模式需要同时指定--file1, --file2和--city参数")
-                sys.exit(1)
-            
-            print(Fore.GREEN + f"[+] 第一个Excel文件: {args.file1}")
-            print(Fore.GREEN + f"[+] 第二个Excel文件: {args.file2}")
-            print(Fore.GREEN + f"[+] 城市名称: {args.city}")
-            
-            result = combined_script.process_combined(
-                args.file1, 
-                args.file2, 
-                args.city,
-                args.excel_output,
-                args.text_output
-            )
-            
-            if result:
-                print(Fore.GREEN + "[+] 组合脚本处理成功完成")
-            else:
-                print(Fore.RED + "[!] 组合脚本处理失败")
-        
-        elif args.ip_tools == 'excel':
+        if args.ip_tools == 'excel':
             if not (args.file1 and args.file2):
                 print(Fore.RED + "[!] 错误: 使用excel模式需要同时指定--file1和--file2参数")
                 sys.exit(1)

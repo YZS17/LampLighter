@@ -1,14 +1,19 @@
 # LampLighter 1.0
-LampLighter是一个网络安全信息收集与分析工具，此工具分析来自IP地址列表的网站，判断它们是否属于特定公司或企业。基于大语言模型，工具能够智能分析网站内容并生成详细报告。
-集成了多种功能，包括FOFA查询、网站分析、漏洞扫描等。部分fofa代码参照FofaMap项目进行二开。
+
+- LampLighter是一个网络安全信息收集与分析工具，此工具分析来自IP地址列表的网站，判断它们是否属于特定公司或企业。基于大语言模型，工具能够智能分析网站内容并生成详细报告。
+
+- 集成了多种功能，包括FOFA查询、网站分析、漏洞扫描等。部分fofa代码参照FofaMap项目进行二开。
+
 ## 设置
 
 1. 安装所需依赖:
+   
    ```
    pip install -r requirements.txt
    ```
 
 2. 配置保存在`config.py`中，包括:
+   
    - OpenAI API配置（API密钥、默认模型等）
    - OCR设置
    - 分析设置（如超时时间）
@@ -44,6 +49,7 @@ fields = title,ip,port,protocol,domain,icp,province,city
 ```
 
 ## 功能特点
+
 - 从Excel文件的第二列读取IP地址/主机信息
 - 获取网站内容（支持HTTP和HTTPS）
 - 截图并进行OCR图像文本识别
@@ -112,17 +118,9 @@ python LampLighter.py -up
 
 ### IP工具
 
-LampLighter集成了三种IP工具模式：
+LampLighter集成了2种IP工具模式：
 
-#### 1. 组合模式 (combined)
-
-同时执行Excel过滤和CIDR提取功能：
-
-```bash
-python LampLighter.py --ip-tools combined --file1 first.xlsx --file2 second.xlsx --city 北京 -e filtered.xlsx -t output.txt
-```
-
-#### 2. Excel过滤模式 (excel)
+#### 1. Excel过滤模式 (excel)
 
 仅执行Excel过滤功能，从第一个表格提取IP并过滤第二个表格：
 
@@ -130,7 +128,7 @@ python LampLighter.py --ip-tools combined --file1 first.xlsx --file2 second.xlsx
 python LampLighter.py --ip-tools excel --file1 first.xlsx --file2 second.xlsx -e filtered.xlsx
 ```
 
-#### 3. CIDR提取模式 (extract)
+#### 2. CIDR提取模式 (extract)
 
 仅执行CIDR提取功能，从表格提取IP并转换为CIDR格式：
 
@@ -201,20 +199,6 @@ python LampLighter.py --analyze --outfile targets.xlsx --target_company "目标�
 
 ### IP工具输出示例
 
-#### 组合模式输出
-
-```
-=====IP工具处理 (combined)=====
-[+] 第一个Excel文件: first.xlsx
-[+] 第二个Excel文件: second.xlsx
-[+] 城市名称: 北京
-[+] 过滤后的Excel已保存到 filtered.xlsx
-CIDR结果:
-ip="1.2.3.0/24" && status_code="200" && domain="" && city="北京"
-[+] CIDR结果已保存到 output.txt
-[+] 组合脚本处理成功完成
-```
-
 #### Excel过滤模式输出
 
 ```
@@ -251,7 +235,6 @@ ip="1.2.3.0/24" && status_code="200" && domain="" && city="北京"
 2. 网站分析功能需要OpenAI或deepseek等大模型API密钥
 3. 漏洞扫描功能使用Nuclei引擎
 4. 部分功能可能需要管理员权限
-
 
 ## 作者
 

@@ -57,8 +57,8 @@ def extract_and_format_ips(df, city, col_index=3):
     output = f"{ip_output} && status_code=\"200\" && domain=\"\" && city=\"{city}\""
     return output
 
-def process_combined(file1, file2, city, excel_output=None, text_output=None):
-    """处理两个表格文件，过滤后提取CIDR"""
+def process_excel(file1, file2, excel_output=None):
+    """仅执行execl.py的功能：从第一个表格提取IP并过滤第二个表格"""
     # 读取两个Excel文件
     try:
         df1 = pd.read_excel(file1)
@@ -72,7 +72,7 @@ def process_combined(file1, file2, city, excel_output=None, text_output=None):
         print("错误: 至少一个表格没有4列")
         return None
     
-    # 第一步: execl.py 功能 - 从第一个表格提取IP并过滤第二个表格
+    # 从第一个表格提取IP并过滤第二个表格
     ip_set = extract_ip_from_column(df1)
     filtered_df = filter_table_by_ip(df2, ip_set)
     
@@ -80,9 +80,28 @@ def process_combined(file1, file2, city, excel_output=None, text_output=None):
     if excel_output:
         filtered_df.to_excel(excel_output, index=False)
         print(f"过滤后的Excel已保存到 {excel_output}")
+    else:
+        print("过滤后的表格:")
+        print(filtered_df)
     
-    # 第二步: extract_ip_cidr.py 功能 - 从过滤后的表格提取IP并转换为CIDR
-    cidr_result = extract_and_format_ips(filtered_df, city)
+    return filtered_df
+
+def process_extract(file, city, text_output=None):
+    """仅执行extract_ip_cidr.py的功能：从表格提取IP并转换为CIDR"""
+    # 读取Excel文件
+    try:
+        df = pd.read_excel(file)
+    except Exception as e:
+        print(f"读取文件错误: {e}")
+        return None
+    
+    # 检查表格是否有足够的列
+    if len(df.columns) < 4:
+        print("错误: 表格没有4列")
+        return None
+    
+    # 从表格提取IP并转换为CIDR
+    cidr_result = extract_and_format_ips(df, city)
     
     # 保存CIDR结果 (如果需要)
     if text_output:
@@ -93,16 +112,29 @@ def process_combined(file1, file2, city, excel_output=None, text_output=None):
         print("CIDR结果:")
         print(cidr_result)
     
-    return filtered_df, cidr_result
+    return cidr_result
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='处理Excel表格并提取CIDR格式IP')
-    parser.add_argument('file1', help='第一个Excel文件路径（包含要排除的IP）')
-    parser.add_argument('file2', help='第二个Excel文件路径（要处理的文件）')
-    parser.add_argument('--city', required=True, help='城市名称（用于CIDR输出）')
-    parser.add_argument('-e', '--excel_output', help='过滤后的Excel输出路径（可选）')
-    parser.add_argument('-t', '--text_output', help='CIDR结果输出路径（可选）')
+    subparsers = parser.add_subparsers(dest='command', help='可用命令')
+    
+    # Excel过滤功能命令
+    excel_parser = subparsers.add_parser('excel', help='仅执行Excel过滤功能')
+    excel_parser.add_argument('file1', help='第一个Excel文件路径（包含要排除的IP）')
+    excel_parser.add_argument('file2', help='第二个Excel文件路径（要处理的文件）')
+    excel_parser.add_argument('-o', '--output', help='过滤后的Excel输出路径（可选）')
+    
+    # CIDR提取功能命令
+    extract_parser = subparsers.add_parser('extract', help='仅执行CIDR提取功能')
+    extract_parser.add_argument('file', help='Excel文件路径')
+    extract_parser.add_argument('--city', required=True, help='城市名称（用于CIDR输出）')
+    extract_parser.add_argument('-o', '--output', help='CIDR结果输出路径（可选）')
     
     args = parser.parse_args()
     
-    process_combined(args.file1, args.file2, args.city, args.excel_output, args.text_output) 
+    if args.command == 'excel':
+        process_excel(args.file1, args.file2, args.output)
+    elif args.command == 'extract':
+        process_extract(args.file, args.city, args.output)
+    else:
+        parser.print_help() 
